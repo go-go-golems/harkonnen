@@ -10,6 +10,8 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/glazed/pkg/help"
+	"github.com/go-go-golems/glazed/pkg/processor"
+	"github.com/go-go-golems/glazed/pkg/settings"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -21,7 +23,7 @@ type HARCommand struct {
 }
 
 func NewHARCommand() (*HARCommand, error) {
-	glazedParameterLayer, err := cli.NewGlazedParameterLayers()
+	glazedParameterLayer, err := settings.NewGlazedParameterLayers()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +139,7 @@ func (h *HARCommand) Run(
 	ctx context.Context,
 	parsedLayers map[string]*layers.ParsedParameterLayer,
 	ps map[string]interface{},
-	gp cmds.Processor,
+	gp processor.Processor,
 ) error {
 	inputFiles, ok := ps["input-files"].([]string)
 	if !ok {
@@ -304,7 +306,7 @@ func (h *HARCommand) Run(
 				}
 			}
 
-			err = gp.ProcessInputObject(row)
+			err = gp.ProcessInputObject(ctx, row)
 			if err != nil {
 				return errors.Wrap(err, "could not process input object")
 			}
@@ -339,4 +341,5 @@ func main() {
 	rootCmd.AddCommand(cobraCommand)
 
 	_, err = rootCmd.ExecuteC()
+	cobra.CheckErr(err)
 }
