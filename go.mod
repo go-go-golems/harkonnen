@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20230329100754-6125fc8d7142
-	github.com/go-go-golems/glazed v0.2.81
+	github.com/go-go-golems/glazed v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.6.1
 )
@@ -20,7 +20,9 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aymanbagabas/go-osc52 v1.0.3 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/charmbracelet/glamour v0.6.0 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -65,6 +67,7 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tj/go-naturaldate v1.3.0 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/excelize/v2 v2.7.0 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
@@ -73,6 +76,7 @@ require (
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/net v0.5.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

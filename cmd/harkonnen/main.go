@@ -12,6 +12,7 @@ import (
 	"github.com/go-go-golems/glazed/pkg/help"
 	"github.com/go-go-golems/glazed/pkg/processor"
 	"github.com/go-go-golems/glazed/pkg/settings"
+	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -139,7 +140,7 @@ func (h *HARCommand) Run(
 	ctx context.Context,
 	parsedLayers map[string]*layers.ParsedParameterLayer,
 	ps map[string]interface{},
-	gp processor.Processor,
+	gp processor.TableProcessor,
 ) error {
 	inputFiles, ok := ps["input-files"].([]string)
 	if !ok {
@@ -165,7 +166,9 @@ func (h *HARCommand) Run(
 		if err != nil {
 			return errors.Wrapf(err, "could not open input file %s", inputFile)
 		}
-		defer f.Close()
+		defer func(f *os.File) {
+			_ = f.Close()
+		}(f)
 
 		var har har.HAR
 		if err := json.NewDecoder(f).Decode(&har); err != nil {
@@ -178,7 +181,7 @@ func (h *HARCommand) Run(
 		log := har.Log
 
 		for _, entry := range log.Entries {
-			row := map[string]interface{}{}
+			row := types.NewRow()
 			if entry.Request != nil && withRequest {
 				if len(matchURLs) > 0 {
 					matched := false
@@ -193,8 +196,8 @@ func (h *HARCommand) Run(
 				}
 
 				request := entry.Request
-				row["request.method"] = request.Method
-				row["request.url"] = request.URL
+				row.Set("request.method", request.Method)
+				row.Set("request.url", request.URL)
 
 				if withRequestCookies {
 					if len(requestCookies) > 0 {
@@ -206,9 +209,9 @@ func (h *HARCommand) Run(
 								}
 							}
 						}
-						row["request.cookies"] = cookies
+						row.Set("request.cookies", cookies)
 					} else {
-						row["request.cookies"] = request.Cookies
+						row.Set("request.cookies", request.Cookies)
 					}
 				}
 
@@ -222,7 +225,7 @@ func (h *HARCommand) Run(
 								}
 							}
 						}
-						row["request.headers"] = headers
+						row.Set("request.headers", headers)
 					} else {
 						headers := map[string]string{}
 						for _, header := range request.Headers {
@@ -231,7 +234,7 @@ func (h *HARCommand) Run(
 							}
 							headers[header.Name] = header.Value
 						}
-						row["request.headers"] = headers
+						row.Set("request.headers", headers)
 					}
 				}
 
@@ -240,21 +243,21 @@ func (h *HARCommand) Run(
 					for _, param := range request.QueryString {
 						v[param.Name] = param.Value
 					}
-					row["request.queryString"] = v
+					row.Set("request.queryString", v)
 				}
 
 				if withRequestBody {
 					if request.PostData != nil {
-						row["request.body"] = request.PostData.Text
+						row.Set("request.body", request.PostData.Text)
 					}
 				}
 			}
 
 			if entry.Response != nil && withResponse {
 				response := entry.Response
-				row["response.status"] = response.Status
+				row.Set("response.status", response.Status)
 				if response.StatusText != "" {
-					row["response.statusText"] = response.StatusText
+					row.Set("response.statusText", response.StatusText)
 				}
 
 				if withResponseCookies {
@@ -267,9 +270,9 @@ func (h *HARCommand) Run(
 								}
 							}
 						}
-						row["response.cookies"] = cookies
+						row.Set("response.cookies", cookies)
 					} else {
-						row["response.cookies"] = response.Cookies
+						row.Set("response.cookies", response.Cookies)
 					}
 				}
 				if withResponseHeaders {
@@ -282,7 +285,7 @@ func (h *HARCommand) Run(
 								}
 							}
 						}
-						row["response.headers"] = headers
+						row.Set("response.headers", headers)
 					} else {
 						headers := map[string]string{}
 						for _, header := range response.Headers {
@@ -291,22 +294,22 @@ func (h *HARCommand) Run(
 							}
 							headers[header.Name] = header.Value
 						}
-						row["response.headers"] = headers
+						row.Set("response.headers", headers)
 					}
 				}
 
 				if response.RedirectURL != "" {
-					row["response.redirectURL"] = response.RedirectURL
+					row.Set("response.redirectURL", response.RedirectURL)
 				}
 
 				if response.Content != nil && withResponseBody {
 					content := response.Content
-					row["response.content.mimeType"] = content.MimeType
-					row["response.content.text"] = content.Text
+					row.Set("response.content.mimeType", content.MimeType)
+					row.Set("response.content.text", content.Text)
 				}
 			}
 
-			err = gp.ProcessInputObject(ctx, row)
+			err = gp.AddRow(ctx, row)
 			if err != nil {
 				return errors.Wrap(err, "could not process input object")
 			}
