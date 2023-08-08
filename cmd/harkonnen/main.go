@@ -117,6 +117,18 @@ func NewHARCommand() (*HARCommand, error) {
 					parameters.WithHelp("Include response body"),
 					parameters.WithDefault(false),
 				),
+				parameters.NewParameterDefinition(
+					"decode-request-json",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Decode request body as JSON"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"decode-response-json",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Decode response body as JSON"),
+					parameters.WithDefault(false),
+				),
 			),
 			cmds.WithArguments(
 				parameters.NewParameterDefinition(
@@ -157,6 +169,16 @@ func (h *HARCommand) Run(
 	withRequestBody := ps["with-request-body"].(bool)
 	withResponseBody := ps["with-response-body"].(bool)
 
+	if withRequestBody && !withRequest {
+		withRequest = true
+	}
+	if withResponseBody && !withResponse {
+		withResponse = true
+	}
+
+	decodeRequestJSON := ps["decode-request-json"].(bool)
+	decodeResponseJSON := ps["decode-response-json"].(bool)
+
 	for _, inputFile := range inputFiles {
 		f, err := os.Open(inputFile)
 		if err != nil {
@@ -194,6 +216,26 @@ func (h *HARCommand) Run(
 				request := entry.Request
 				row.Set("request.method", request.Method)
 				row.Set("request.url", request.URL)
+				if request.PostData != nil {
+					if decodeRequestJSON {
+						var data interface{}
+						if err := json.Unmarshal([]byte(request.PostData.Text), &data); err == nil {
+							row.Set("request.postData", data)
+						} else {
+							row.Set("request.postData", request.PostData.Text)
+						}
+					} else {
+						row.Set("request.postData", request.PostData.Text)
+					}
+
+					if len(request.PostData.Params) > 0 {
+						params := map[string]string{}
+						for _, param := range request.PostData.Params {
+							params[param.Name] = param.Value
+						}
+						row.Set("request.postData.params", params)
+					}
+				}
 
 				if withRequestCookies {
 					if len(requestCookies) > 0 {
@@ -244,7 +286,16 @@ func (h *HARCommand) Run(
 
 				if withRequestBody {
 					if request.PostData != nil {
-						row.Set("request.body", request.PostData.Text)
+						if decodeRequestJSON {
+							var v interface{}
+							if err := json.Unmarshal([]byte(request.PostData.Text), &v); err == nil {
+								row.Set("request.body", v)
+							} else {
+								row.Set("request.body", request.PostData.Text)
+							}
+						} else {
+							row.Set("request.body", request.PostData.Text)
+						}
 					}
 				}
 			}
@@ -301,7 +352,16 @@ func (h *HARCommand) Run(
 				if response.Content != nil && withResponseBody {
 					content := response.Content
 					row.Set("response.content.mimeType", content.MimeType)
-					row.Set("response.content.text", content.Text)
+					if decodeResponseJSON {
+						var v interface{}
+						if err := json.Unmarshal([]byte(content.Text), &v); err == nil {
+							row.Set("response.content.text", v)
+						} else {
+							row.Set("response.content.text", content.Text)
+						}
+					} else {
+						row.Set("response.content.text", content.Text)
+					}
 				}
 			}
 
