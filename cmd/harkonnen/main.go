@@ -10,7 +10,7 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/glazed/pkg/help"
-	"github.com/go-go-golems/glazed/pkg/processor"
+	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/settings"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/pkg/errors"
@@ -20,7 +20,7 @@ import (
 )
 
 type HARCommand struct {
-	description *cmds.CommandDescription
+	*cmds.CommandDescription
 }
 
 func NewHARCommand() (*HARCommand, error) {
@@ -30,7 +30,7 @@ func NewHARCommand() (*HARCommand, error) {
 	}
 
 	return &HARCommand{
-		description: cmds.NewCommandDescription(
+		CommandDescription: cmds.NewCommandDescription(
 			"har",
 			cmds.WithShort("Format HAR data"),
 			cmds.WithFlags(
@@ -132,15 +132,11 @@ func NewHARCommand() (*HARCommand, error) {
 	}, nil
 }
 
-func (h *HARCommand) Description() *cmds.CommandDescription {
-	return h.description
-}
-
 func (h *HARCommand) Run(
 	ctx context.Context,
 	parsedLayers map[string]*layers.ParsedParameterLayer,
 	ps map[string]interface{},
-	gp processor.TableProcessor,
+	gp middlewares.Processor,
 ) error {
 	inputFiles, ok := ps["input-files"].([]string)
 	if !ok {
