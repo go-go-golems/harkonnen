@@ -30,7 +30,7 @@ brews:
   - name: harkonnen
     description: "harkonnen is a tool"
     homepage: "https://github.com/go-go-golems/harkonnen"
-    tap:
+    repository:
       owner: go-go-golems
       name: homebrew-go-go-go
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
