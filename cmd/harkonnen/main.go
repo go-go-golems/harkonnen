@@ -23,6 +23,8 @@ type HARCommand struct {
 	*cmds.CommandDescription
 }
 
+var _ cmds.GlazeCommand = (*HARCommand)(nil)
+
 func NewHARCommand() (*HARCommand, error) {
 	glazedParameterLayer, err := settings.NewGlazedParameterLayers()
 	if err != nil {
@@ -144,42 +146,44 @@ func NewHARCommand() (*HARCommand, error) {
 	}, nil
 }
 
-func (h *HARCommand) Run(
+type HARSettings struct {
+	InputFiles          []string `glazed.parameter:"input-files"`
+	RequestHeaders      []string `glazed.parameter:"request-headers"`
+	WithRequestHeaders  bool     `glazed.parameter:"with-request-headers"`
+	ResponseHeaders     []string `glazed.parameter:"response-headers"`
+	WithResponseHeaders bool     `glazed.parameter:"with-response-headers"`
+	RequestCookies      []string `glazed.parameter:"request-cookies"`
+	WithRequestCookies  bool     `glazed.parameter:"with-request-cookies"`
+	ResponseCookies     []string `glazed.parameter:"response-cookies"`
+	WithResponseCookies bool     `glazed.parameter:"with-response-cookies"`
+	MatchURLs           []string `glazed.parameter:"match-urls"`
+	WithRequest         bool     `glazed.parameter:"with-request"`
+	WithResponse        bool     `glazed.parameter:"with-response"`
+	WithRequestBody     bool     `glazed.parameter:"with-request-body"`
+	WithResponseBody    bool     `glazed.parameter:"with-response-body"`
+	DecodeRequestJSON   bool     `glazed.parameter:"decode-request-json"`
+	DecodeResponseJSON  bool     `glazed.parameter:"decode-response-json"`
+}
+
+func (h *HARCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers map[string]*layers.ParsedParameterLayer,
-	ps map[string]interface{},
+	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
-	inputFiles, ok := ps["input-files"].([]string)
-	if !ok {
-		return fmt.Errorf("input-files argument is not a string list")
+	s := &HARSettings{}
+	err := parsedLayers.InitializeStruct(layers.DefaultSlug, s)
+	if err != nil {
+		return err
 	}
 
-	requestHeaders := ps["request-headers"].([]string)
-	withRequestHeaders := ps["with-request-headers"].(bool)
-	responseHeaders := ps["response-headers"].([]string)
-	withResponseHeaders := ps["with-response-headers"].(bool)
-	requestCookies := ps["request-cookies"].([]string)
-	withRequestCookies := ps["with-request-cookies"].(bool)
-	responseCookies := ps["response-cookies"].([]string)
-	withResponseCookies := ps["with-response-cookies"].(bool)
-	matchURLs := ps["match-urls"].([]string)
-	withRequest := ps["with-request"].(bool)
-	withResponse := ps["with-response"].(bool)
-	withRequestBody := ps["with-request-body"].(bool)
-	withResponseBody := ps["with-response-body"].(bool)
-
-	if withRequestBody && !withRequest {
-		withRequest = true
+	if s.WithRequestBody && !s.WithRequest {
+		s.WithRequest = true
 	}
-	if withResponseBody && !withResponse {
-		withResponse = true
+	if s.WithResponseBody && !s.WithResponse {
+		s.WithResponse = true
 	}
 
-	decodeRequestJSON := ps["decode-request-json"].(bool)
-	decodeResponseJSON := ps["decode-response-json"].(bool)
-
-	for _, inputFile := range inputFiles {
+	for _, inputFile := range s.InputFiles {
 		f, err := os.Open(inputFile)
 		if err != nil {
 			return errors.Wrapf(err, "could not open input file %s", inputFile)
@@ -200,10 +204,10 @@ func (h *HARCommand) Run(
 
 		for _, entry := range log.Entries {
 			row := types.NewRow()
-			if entry.Request != nil && withRequest {
-				if len(matchURLs) > 0 {
+			if entry.Request != nil && s.WithRequest {
+				if len(s.MatchURLs) > 0 {
 					matched := false
-					for _, matchURL := range matchURLs {
+					for _, matchURL := range s.MatchURLs {
 						if matched, _ = regexp.MatchString(matchURL, entry.Request.URL); matched {
 							break
 						}
@@ -217,7 +221,7 @@ func (h *HARCommand) Run(
 				row.Set("request.method", request.Method)
 				row.Set("request.url", request.URL)
 				if request.PostData != nil {
-					if decodeRequestJSON {
+					if s.DecodeRequestJSON {
 						var data interface{}
 						if err := json.Unmarshal([]byte(request.PostData.Text), &data); err == nil {
 							row.Set("request.postData", data)
@@ -237,11 +241,11 @@ func (h *HARCommand) Run(
 					}
 				}
 
-				if withRequestCookies {
-					if len(requestCookies) > 0 {
+				if s.WithRequestCookies {
+					if len(s.RequestCookies) > 0 {
 						cookies := map[string]string{}
 						for _, cookie := range request.Cookies {
-							for _, requestCookie := range requestCookies {
+							for _, requestCookie := range s.RequestCookies {
 								if cookie.Name == requestCookie {
 									cookies[cookie.Name] = cookie.Value
 								}
@@ -253,11 +257,11 @@ func (h *HARCommand) Run(
 					}
 				}
 
-				if withRequestHeaders {
-					if len(requestHeaders) > 0 {
+				if s.WithRequestHeaders {
+					if len(s.RequestHeaders) > 0 {
 						headers := map[string]string{}
 						for _, header := range request.Headers {
-							for _, requestHeader := range requestHeaders {
+							for _, requestHeader := range s.RequestHeaders {
 								if header.Name == requestHeader {
 									headers[header.Name] = header.Value
 								}
@@ -284,9 +288,9 @@ func (h *HARCommand) Run(
 					row.Set("request.queryString", v)
 				}
 
-				if withRequestBody {
+				if s.WithRequestBody {
 					if request.PostData != nil {
-						if decodeRequestJSON {
+						if s.DecodeRequestJSON {
 							var v interface{}
 							if err := json.Unmarshal([]byte(request.PostData.Text), &v); err == nil {
 								row.Set("request.body", v)
@@ -300,18 +304,18 @@ func (h *HARCommand) Run(
 				}
 			}
 
-			if entry.Response != nil && withResponse {
+			if entry.Response != nil && s.WithResponse {
 				response := entry.Response
 				row.Set("response.status", response.Status)
 				if response.StatusText != "" {
 					row.Set("response.statusText", response.StatusText)
 				}
 
-				if withResponseCookies {
-					if len(responseCookies) > 0 {
+				if s.WithResponseCookies {
+					if len(s.ResponseCookies) > 0 {
 						cookies := map[string]string{}
 						for _, cookie := range response.Cookies {
-							for _, responseCookie := range responseCookies {
+							for _, responseCookie := range s.ResponseCookies {
 								if cookie.Name == responseCookie {
 									cookies[cookie.Name] = cookie.Value
 								}
@@ -322,11 +326,11 @@ func (h *HARCommand) Run(
 						row.Set("response.cookies", response.Cookies)
 					}
 				}
-				if withResponseHeaders {
-					if len(responseHeaders) > 0 {
+				if s.WithResponseHeaders {
+					if len(s.ResponseHeaders) > 0 {
 						headers := map[string]string{}
 						for _, header := range response.Headers {
-							for _, responseHeader := range responseHeaders {
+							for _, responseHeader := range s.ResponseHeaders {
 								if header.Name == responseHeader {
 									headers[header.Name] = header.Value
 								}
@@ -349,10 +353,10 @@ func (h *HARCommand) Run(
 					row.Set("response.redirectURL", response.RedirectURL)
 				}
 
-				if response.Content != nil && withResponseBody {
+				if response.Content != nil && s.WithResponseBody {
 					content := response.Content
 					row.Set("response.content.mimeType", content.MimeType)
-					if decodeResponseJSON {
+					if s.DecodeResponseJSON {
 						var v interface{}
 						if err := json.Unmarshal([]byte(content.Text), &v); err == nil {
 							row.Set("response.content.text", v)
