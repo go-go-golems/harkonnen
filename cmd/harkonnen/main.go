@@ -139,7 +139,7 @@ func NewHARCommand() (*HARCommand, error) {
 					parameters.WithRequired(true),
 				),
 			),
-			cmds.WithLayers(
+			cmds.WithLayersList(
 				glazedParameterLayer,
 			),
 		),
