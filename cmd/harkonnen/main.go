@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/chromedp/cdproto/har"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -198,7 +197,7 @@ func (h *HARCommand) RunIntoGlazeProcessor(
 		}
 
 		if har.Log == nil {
-			return fmt.Errorf("could not find log in HAR file %s", inputFile)
+			return errors.Errorf("could not find log in HAR file %s", inputFile)
 		}
 		log := har.Log
 
