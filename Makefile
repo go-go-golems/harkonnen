@@ -46,3 +46,11 @@ harkonnen_BINARY=$(shell which harkonnen)
 install:
 	go build -o ./dist/harkonnen ./cmd/harkonnen && \
 		cp ./dist/harkonnen $(harkonnen_BINARY)
+
+.PHONY: logcopter-generate
+logcopter-generate:
+	GOWORK=off go tool logcopter-gen -include-main -var zlog -area-prefix go-go-golems.harkonnen -strip-prefix github.com/go-go-golems/harkonnen ./cmd/... ./pkg/...
+
+.PHONY: logcopter-check
+logcopter-check:
+	GOWORK=off go tool logcopter-gen -include-main -var zlog -area-prefix go-go-golems.harkonnen -strip-prefix github.com/go-go-golems/harkonnen -check ./cmd/... ./pkg/...
