@@ -5,11 +5,9 @@ linters:
   enable:
     # defaults
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
     # stuff I'm adding
     - exhaustive
