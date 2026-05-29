@@ -10,7 +10,6 @@ linters:
     - staticcheck
     - unused
     - exhaustive
-    - gofmt
     - nonamedreturns
     - predeclared
   exclusions:
