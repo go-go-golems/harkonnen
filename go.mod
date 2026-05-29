@@ -1,6 +1,6 @@
 module github.com/go-go-golems/harkonnen
 
-go 1.25.0
+go 1.26.3
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89
